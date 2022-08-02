@@ -10,67 +10,53 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
-import com.lukas.soccernews.MainActivity;
-import com.lukas.soccernews.data.dataLocal.AppDatabase;
+import com.google.android.material.snackbar.Snackbar;
+
+import com.lukas.soccernews.R;
 import com.lukas.soccernews.databinding.FragmentNewsBinding;
 import com.lukas.soccernews.ui.adapter.NewsAdapter;
 
-
 public class NewsFragment extends Fragment {
 
-    private NewsViewModel newsViewModel;
     private FragmentNewsBinding binding;
-    private  AppDatabase db;
+    private NewsViewModel newsViewModel;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        NewsViewModel newsViewModel = new ViewModelProvider(this).get(NewsViewModel.class);
+        newsViewModel = new ViewModelProvider(this).get(NewsViewModel.class);
 
         binding = FragmentNewsBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
+        binding.rvNews.setLayoutManager(new LinearLayoutManager(getContext()));
 
+        observeNews();
+        observeStates();
 
-        binding.rvnews.setLayoutManager(new LinearLayoutManager(getContext()));
+        binding.srlNews.setOnRefreshListener(newsViewModel::findNews);
+
+        return root;
+    }
+
+    private void observeNews() {
         newsViewModel.getNews().observe(getViewLifecycleOwner(), news -> {
-            binding.rvnews.setAdapter(new NewsAdapter(news, updatedNews ->{
-                db.newsDao().save(updatedNews);
-
-
-            }));
-
+            binding.rvNews.setAdapter(new NewsAdapter(news, newsViewModel::saveNews));
         });
+    }
 
-
-        binding.rvnews.setLayoutManager(new LinearLayoutManager(getContext()));
-        newsViewModel.getNews().observe(getViewLifecycleOwner(), news ->  {
-            binding.rvnews.setAdapter(new NewsAdapter(news, updatedNews -> {
-                MainActivity activity = (MainActivity) getActivity();
-                if (activity != null) {
-                    activity.getDb().newsDao().save(updatedNews);
-                }
-
-
-            }));
-        });
-
-        newsViewModel.getState().observe(getViewLifecycleOwner(), state ->  {
-            switch (state){
-
-
+    private void observeStates() {
+        newsViewModel.getState().observe(getViewLifecycleOwner(), state -> {
+            switch (state) {
                 case DOING:
-                    //TODO incluir swipeRefreshlayout
+                    binding.srlNews.setRefreshing(true);
                     break;
-
                 case DONE:
-                    //TODO Finalizar swipeRefreshlayout
+                    binding.srlNews.setRefreshing(false);
                     break;
-
                 case ERROR:
-                    //TODO Finalizar swipeRefreshlayout
-                    //TODO mostra erro
+                    binding.srlNews.setRefreshing(false);
+                    Snackbar.make(binding.srlNews, R.string.app_name, Snackbar.LENGTH_SHORT).show();
             }
         });
-        return root;
     }
 
     @Override
@@ -78,4 +64,6 @@ public class NewsFragment extends Fragment {
         super.onDestroyView();
         binding = null;
     }
+
+
 }
